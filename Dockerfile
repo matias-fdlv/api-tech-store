@@ -27,29 +27,25 @@ RUN a2enmod rewrite
 RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/*.conf
 RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
-# 6. Directorio de trabajo y copia del código fuente
+# 6. Directorio de trabajo
 WORKDIR /var/www/html
 
-# Importante: Copia todo el código fuente de Laravel AHORA.
-# En Railway, este Dockerfile se ejecutará en la raíz de tu proyecto.
+# 7. COPIA DEL CÓDIGO FUENTE (¡CRÍTICO!)
+# Ahora copiamos todos los archivos del proyecto al directorio de trabajo.
 COPY . /var/www/html
 
-# 7. Instalación de dependencias de Laravel y Build (Pasos del docker-compose.yml)
-# Este es el paso crucial que prepara la aplicación para su ejecución.
+# 8. Instalación de dependencias de Laravel y Build
+# Ahora composer y npm pueden encontrar los archivos composer.json y package.json.
 RUN composer install --no-dev --prefer-dist --optimize-autoloader
 RUN npm install
 RUN npm run build
 
-# 8. Permisos: Asegurar que Apache pueda escribir en storage y bootstrap/cache
+# 9. Permisos (Asegurar que www-data pueda escribir en storage/cache)
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# 9. Exponer Puerto y Comando de Ejecución
-# Railway inyectará una variable $PORT en lugar del 80 por defecto.
-# El comando de inicio debe ser el que mantiene Apache ejecutándose en primer plano.
-# NOTA: La migración (php artisan migrate) NO DEBE ir en el Dockerfile, sino en el script de inicio
-# o en la configuración de Railway, después de que la DB esté disponible.
+# 10. Exponer Puerto y Comando de Ejecución
 EXPOSE 80
 
-# Comando final que inicia Apache
 CMD ["apache2-foreground"]
+
