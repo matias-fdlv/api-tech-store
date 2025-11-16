@@ -1,0 +1,72 @@
+services:
+  # Base de datos exclusiva para la API
+  api-db-tech:
+    image: mysql:8.0.43-debian
+    container_name: api-db-tech
+    networks:
+      - shocking-sales-network    
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: api_tech_store
+      MYSQL_USER: api_user
+      MYSQL_PASSWORD: api_pass
+    ports:
+      - "3314:3306"  # Puerto diferente a tu proyecto actual (3306)
+    volumes:
+      - api_db_data_tech:/var/lib/mysql
+
+  # Servidor web para la API
+  api-web-tech:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-web-tech
+    networks:
+      - shocking-sales-network    
+    ports:
+      - "6666:80"  # Puerto diferente a tu proyecto actual (8080)
+    volumes:
+      - ./src:/var/www/html  # Carpeta src con el código Laravel
+    depends_on:
+      - api-db-tech
+    environment:
+      - DB_HOST=api-db-tech
+      - DB_DATABASE=api_tech_store
+      - DB_USERNAME=api_user
+      - DB_PASSWORD=api_pass
+    command: >
+      bash -lc "
+      sleep 15 &&
+      cd /var/www/html &&
+      rm -f storage/framework/vite.hot &&
+      npm ci || npm install &&
+      npm run build &&
+      php artisan migrate --force &&                   
+      php artisan config:clear &&       
+      apache2-foreground 
+      "
+  # CUando se termine de configurar la bd, cambiaremos config:clear por "php artisan optimize:clear &&"
+
+
+  # phpMyAdmin para la API
+  api-phpmyadmin-tech:
+    image: phpmyadmin:latest
+    container_name: api-phpmyadmin-tech
+    networks:
+      - shocking-sales-network    
+    environment:
+      PMA_HOST: api-db-tech
+      PMA_USER: root
+      PMA_PASSWORD: root
+    depends_on:
+      - api-db-tech
+    ports:
+      - "8083:80"  # Puerto diferente a tu proyecto actual (8081)
+
+networks:
+  shocking-sales-network:
+    external: true
+
+volumes:
+  api_db_data_tech:
+
